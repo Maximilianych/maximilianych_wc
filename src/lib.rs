@@ -1,5 +1,8 @@
 use clap::Parser;
-use std::{io::{Error, ErrorKind}, path::PathBuf};
+use std::io::{Error, ErrorKind};
+use std::io::{BufRead, BufReader};
+use std::fs::File;
+use std::path::PathBuf;
 
 /// wc from Maximilianych
 #[derive(Parser, Debug, Default)]
@@ -7,25 +10,37 @@ use std::{io::{Error, ErrorKind}, path::PathBuf};
 pub struct Cli {
     /// Show the size in bytes
     #[arg(short = 'c')]
-    get_byte_size: bool,
+    get_byte_count: bool,
 
+    /// Show the size in lines
+    #[arg(short = 'l')]
+    get_line_count: bool,
+    
     /// File path
     #[arg(value_name = "FILE")]
     file_path: Option<PathBuf>,
 }
 
-pub fn run(cli: crate::Cli) {
-    let result: Result<u64, Error> = match cli {
+pub fn run(cli: Cli) {
+    let result: Result<usize, Error> = match cli {
         Cli {
-            get_byte_size: true,
+            get_byte_count: true,
+            get_line_count: false,
+
             file_path: Some(ref file_path),
-        } => get_byte_size(file_path),
+        } => get_byte_count(file_path),
+        Cli {
+            get_byte_count: false,
+            get_line_count: true,
+
+            file_path: Some(ref file_path)
+        } => get_line_count(file_path),
         _ => Err(Error::new(ErrorKind::InvalidInput, "Invalid input")),
     };
 
     match result {
-        Ok(size) => {
-            print!("{}", size);
+        Ok(count) => {
+            print!("{}", count);
             println!(" {}", cli.file_path.unwrap().to_str().unwrap())
         },
         Err(err) => println!("{}", err)
@@ -33,9 +48,21 @@ pub fn run(cli: crate::Cli) {
 
 }
 
-pub fn get_byte_size(file_path: &PathBuf) -> Result<u64, Error> {
-    Ok(file_path.metadata()?.len())
+pub fn get_byte_count(file_path: &PathBuf) -> Result<usize, Error> {
+    Ok(file_path.metadata()?.len() as usize)
 }
+
+pub fn get_bufreader(file_path: &PathBuf) -> Result<BufReader<File>, Error> {
+    let file = File::open(file_path)?;
+    Ok(BufReader::new(file))
+}
+
+pub fn get_line_count(file_path: &PathBuf) -> Result<usize, Error> {
+    let line_count = get_bufreader(file_path)?.lines().count(); 
+    Ok(line_count)
+}
+
+
 
 
 
@@ -44,7 +71,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_get_byte_size() {
-        assert_eq!(342_181, get_byte_size(&PathBuf::from("test.txt")).unwrap());
+    fn test_get_byte_count() {
+        assert_eq!(342181, get_byte_count(&PathBuf::from("test.txt")).unwrap());
     }
+
+    #[test]
+    fn test_get_line_count() {
+        assert_eq!(7143, get_line_count(&PathBuf::from("test.txt")).unwrap());
+    }
+
+
 }
