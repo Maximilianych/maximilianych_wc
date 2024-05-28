@@ -16,6 +16,10 @@ pub struct Cli {
     #[arg(short = 'l')]
     get_line_count: bool,
     
+    /// Show the size in lines
+    #[arg(short = 'w')]
+    get_word_count: bool,
+
     /// File path
     #[arg(value_name = "FILE")]
     file_path: Option<PathBuf>,
@@ -26,15 +30,21 @@ pub fn run(cli: Cli) {
         Cli {
             get_byte_count: true,
             get_line_count: false,
-
+            get_word_count: false,
             file_path: Some(ref file_path),
         } => get_byte_count(file_path),
         Cli {
             get_byte_count: false,
             get_line_count: true,
-
+            get_word_count: false,
             file_path: Some(ref file_path)
         } => get_line_count(file_path),
+        Cli {
+            get_byte_count: false,
+            get_line_count: false,
+            get_word_count: true,
+            file_path: Some(ref file_path)
+        } => get_word_count(file_path),
         _ => Err(Error::new(ErrorKind::InvalidInput, "Invalid input")),
     };
 
@@ -62,7 +72,18 @@ pub fn get_line_count(file_path: &PathBuf) -> Result<usize, Error> {
     Ok(line_count)
 }
 
-
+pub fn get_word_count(file_path: &PathBuf) -> Result<usize, Error> {
+    let mut word_count: usize = 0;
+    for line in get_bufreader(file_path)?.lines() {
+        match line {
+            Ok(line) => {
+                word_count += line.split_whitespace().count();
+            }
+            _ => {}
+        }
+    } 
+    Ok(word_count)
+}
 
 
 
@@ -80,5 +101,8 @@ mod tests {
         assert_eq!(7143, get_line_count(&PathBuf::from("test.txt")).unwrap());
     }
 
-
+    #[test]
+    fn test_get_word_count() {
+        assert_eq!(58164, get_word_count(&PathBuf::from("test.txt")).unwrap());
+    }
 }
