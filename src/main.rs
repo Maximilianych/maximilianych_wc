@@ -1,4 +1,4 @@
-use maximilianych_wc as mwc;
+use mwc;
 use clap::Parser;
 
 
