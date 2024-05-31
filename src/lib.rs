@@ -1,8 +1,9 @@
 use clap::Parser;
-use std::io::{self, Error, Read};
-use std::fs::File;
-use std::path::PathBuf;
 use indexmap::IndexMap;
+use std::fs::File;
+use std::io::{self, Error, Read};
+use std::path::PathBuf;
+use std::process;
 
 /// wc from Maximilianych
 #[derive(Parser, Debug, Default)]
@@ -15,7 +16,7 @@ pub struct Cli {
     /// Show the size in lines
     #[arg(short = 'l')]
     get_line_count: bool,
-    
+
     /// Show the size in words
     #[arg(short = 'w')]
     get_word_count: bool,
@@ -30,20 +31,31 @@ pub struct Cli {
 }
 
 pub fn run(cli: Cli) {
-    
     let mut result_vec = Vec::new();
 
     if cli.file_path.len() >= 1 {
         for path in &cli.file_path {
             let mut file = String::new();
-            File::open(path).unwrap().read_to_string(&mut file).unwrap();
+            File::open(path)
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    process::exit(1);
+                })
+                .read_to_string(&mut file)
+                .unwrap_or_else(|e| {
+                    eprintln!("Error: {e}");
+                    process::exit(1);
+                });
             let result = get_for_file(&cli, file);
             result_vec.push(result);
         }
     } else if cli.file_path.len() < 1 {
         let mut stdin = io::stdin();
         let mut file = String::new();
-        stdin.read_to_string(&mut file).unwrap();
+        stdin.read_to_string(&mut file).unwrap_or_else(|e| {
+            eprintln!("Error: {e}");
+            process::exit(1);
+        });
         result_vec.push(get_for_file(&cli, file))
     }
 
@@ -55,7 +67,12 @@ pub fn run(cli: Cli) {
         }
         print!("\n")
     });
-    result_vec.iter().next().unwrap().iter().for_each(|(k, _)| print!("{k}\t"));
+    result_vec
+        .iter()
+        .next()
+        .unwrap()
+        .iter()
+        .for_each(|(k, _)| print!("{k}\t"));
 }
 
 pub fn get_for_file(cli: &Cli, file: String) -> IndexMap<String, usize> {
@@ -96,11 +113,14 @@ pub fn get_for_file(cli: &Cli, file: String) -> IndexMap<String, usize> {
 }
 
 pub fn get_byte_count(file: &String) -> Result<usize, Error> {
-    Ok(file.len() )
+    Ok(file.len())
 }
 
 pub fn get_char_count(file: &String) -> Result<usize, Error> {
-    Ok(file.chars().filter(|x| !(*x=='\n') && !(*x=='\r')).count())
+    Ok(file
+        .chars()
+        .filter(|x| !(*x == '\n') && !(*x == '\r'))
+        .count())
 }
 
 pub fn get_word_count(file: &String) -> Result<usize, Error> {
@@ -113,13 +133,15 @@ pub fn get_line_count(file: &String) -> Result<usize, Error> {
 
 pub fn get_all_count(file: &String) -> Result<(usize, usize, usize, usize), Error> {
     let bc = file.len();
-    let cc = file.chars().filter(|x| !(*x=='\n') && !(*x=='\r')).count();
+    let cc = file
+        .chars()
+        .filter(|x| !(*x == '\n') && !(*x == '\r'))
+        .count();
     let wc = file.split_whitespace().count();
     let lc = file.split('\n').count();
 
     Ok((bc, cc, wc, lc))
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -128,36 +150,50 @@ mod tests {
     #[test]
     fn test_get_byte_count() {
         let mut file = String::new();
-        File::open("test.txt").unwrap().read_to_string(&mut file).unwrap();
+        File::open("test.txt")
+            .unwrap()
+            .read_to_string(&mut file)
+            .unwrap();
         assert_eq!(342181, get_byte_count(&file).unwrap());
     }
 
     #[test]
     fn test_get_char_count() {
         let mut file = String::new();
-        File::open("test.txt").unwrap().read_to_string(&mut file).unwrap();
+        File::open("test.txt")
+            .unwrap()
+            .read_to_string(&mut file)
+            .unwrap();
         assert_eq!(325001, get_char_count(&file).unwrap());
-
     }
 
     #[test]
     fn test_get_word_count() {
         let mut file = String::new();
-        File::open("test.txt").unwrap().read_to_string(&mut file).unwrap();
+        File::open("test.txt")
+            .unwrap()
+            .read_to_string(&mut file)
+            .unwrap();
         assert_eq!(58164, get_word_count(&file).unwrap());
     }
-    
+
     #[test]
     fn test_get_line_count() {
         let mut file = String::new();
-        File::open("test.txt").unwrap().read_to_string(&mut file).unwrap();
+        File::open("test.txt")
+            .unwrap()
+            .read_to_string(&mut file)
+            .unwrap();
         assert_eq!(7143, get_line_count(&file).unwrap());
     }
 
     #[test]
     fn test_get_all_count() {
         let mut file = String::new();
-        File::open("test.txt").unwrap().read_to_string(&mut file).unwrap();
+        File::open("test.txt")
+            .unwrap()
+            .read_to_string(&mut file)
+            .unwrap();
         assert_eq!((342181, 325001, 58164, 7143), get_all_count(&file).unwrap());
     }
 }
