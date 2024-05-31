@@ -56,7 +56,8 @@ pub fn run(cli: Cli) {
             eprintln!("Error: {e}");
             process::exit(1);
         });
-        result_vec.push(get_for_file(&cli, file))
+        let result = get_for_file(&cli, file);
+        result_vec.push(result);
     }
 
     let path_iter = &mut cli.file_path.iter();
@@ -103,7 +104,7 @@ pub fn get_for_file(cli: &Cli, file: String) -> IndexMap<String, usize> {
 
     if !cli.get_byte_count && !cli.get_char_count && !cli.get_word_count && !cli.get_line_count {
         if let Ok((byte, char, word, line)) = get_all_count(&file) {
-            result.insert("Byte".to_string(), byte);
+            result.insert("Bytes".to_string(), byte);
             result.insert("Chars".to_string(), char);
             result.insert("Words".to_string(), word);
             result.insert("Lines".to_string(), line);
